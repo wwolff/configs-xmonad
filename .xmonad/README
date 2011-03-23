@@ -1,0 +1,7 @@
+Also, see bin directory in this repo for `hclxm' a bash script or
+alias to clean up all .o and .hi files in .xmonad and subdirectories
+(like .xmonad/lib), then xmonad --recompile && xmonad --restart
+
+Eventually this functionality may be part of xmonad, but for now it
+can be handy when jumping between xmonad versions or changing
+ghc versions.
