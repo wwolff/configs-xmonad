@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fno-warn-missing-signatures #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-} -- for TallAlt
 
--- sereven xmonad.hs (0.9.2 - 0.10) $ 2011-03-19
+-- sereven xmonad.hs (0.9.2 - 0.10) $ 2011-05-09
 
 -- imports {{{
 import XMonad hiding (keys)
@@ -96,6 +96,8 @@ keys =
     , "M-S-q"         ~> spawn "xmessage -- [ Shift+Mod1+Mod4+Q to exit; no gnome-session mgr] --"
     , "M-<Space>"     ~> sendMessage ToggleLayout  -- toggle fullscreen
     , "M-c"           ~> sendMessage NextLayout
+    , "M-<Return>"    ~> windows $ W.focusMaster
+    , "M-M1-<Return>" ~> windows $ W.focusUp . W.focusMaster
     , "M-M1-."        ~> sendMessage Shrink
     , "M-M1-,"        ~> sendMessage Expand
     , "M-<F9>"        ~> layoutScreens 3 $ fixedLayout
@@ -122,7 +124,7 @@ keys =
     , "M-<Tab>" ~> scratchpadSpawnActionTerminal "urxvt -pe tabbed"
     , "M-r"     ~> runOrRaisePrompt promptConfig
     , "M-M1-r"  ~> changeDir promptConfig ]
-    ++
+    ++ --use intelligent search instead?
     [ "M-/ "    ++ ks ~> promptSearch promptConfig s | (ks,s) <- searches ]
     ++
     [ "M-M1-/ " ++ ks ~> selectSearch s | (ks,s) <- searches ]
@@ -150,7 +152,6 @@ keys =
     followShift = liftM2 (.) W.view W.shift
 -- }}}
 
---use intelligent
 -- manage hook {{{
 manageHooks =
     composeAll
@@ -162,7 +163,8 @@ manageHooks =
     , ("Gimp" `isPrefixOf`)       <$> className -?> doShift "5"
     , className =? "Cryptote"
             -?> doF W.shiftMaster <+> (doRectFloat $ W.RationalRect 0.1 0.6 0.5 0.35)
-    , className =? "Acroread" -?> doShift "2"
+    , isMPlayerFull           -?> doShift "5"
+    , className =? "Zathura"  -?> doShift "2"
     , className =? "Xmessage" -?> doF W.shiftMaster <+> doCenterFloat
     , className =? "Qjackctl" -?> doFloat
     , className =? "feh"      -?> doFloat
@@ -171,6 +173,8 @@ manageHooks =
     , isDialog -?> doF W.shiftMaster <+> doFloat
     , return True -?> doF W.swapDown
     ]
+  where isMPlayerFull = (className =? "MPlayer" <&&> appName =? "gl2")
+                        <||> title =? "Gnome MPlayer Fullscreen"
 -- }}}
 
 -- layouts {{{
