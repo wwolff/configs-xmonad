@@ -1,3 +1,0 @@
-#!/bin/bash
-find $HOME/.xmonad -regex '.*\.o\|.*\.hi' -execdir rm '{}' +
-xmonad --recompile && xmonad --restart
