@@ -85,7 +85,7 @@ imap <F5> <ESC>:set number!<CR>i
 map <silent> <F8> :nohlsearch<CR>
 
 " sort words on current line
-" ( if quoted bits further right in the line, vi",s or vi',s will also work)
+" ( if quoted bits further right in the line, vi"<F9> or vi'<F9> will also work)
 nmap <F9> V :SortWords<CR>
 " or selected words
 vmap <F9> :SortWords<CR>
