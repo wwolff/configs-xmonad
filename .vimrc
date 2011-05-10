@@ -2,7 +2,6 @@
 
 " ---[ TODO ]------------------------------------------------
 "  clean up augroups
-"  add back in sort words fn
 " -----------------------------------------------------------
 
 set spellfile=/home/gvg/.vim/spell/en.utf-8.add
