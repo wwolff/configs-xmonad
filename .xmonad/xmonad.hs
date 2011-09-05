@@ -21,22 +21,17 @@ import System.Exit
 import XMonad.Actions.CycleWS
 import XMonad.Actions.FlexibleManipulate as Flex
 import XMonad.Actions.OnScreen (onlyOnScreen)
-import XMonad.Actions.Search hiding (isPrefixOf)
 import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowNavigation
 import XMonad.Config.Gnome
 import XMonad.Hooks.DynamicLog
-import XMonad.Hooks.FadeInactive
---import XMonad.Hooks.FadeWindows
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.SetWMName
-import XMonad.Layout.IM
 import XMonad.Layout.LayoutHints
 import XMonad.Layout.LimitWindows
 import XMonad.Layout.NoBorders
 import XMonad.Layout.PerWorkspace
-import XMonad.Layout.Reflect (reflectHoriz)
 import XMonad.Layout.Spacing
 import XMonad.Layout.ToggleLayouts
 import XMonad.Layout.WorkspaceDir
@@ -48,6 +43,7 @@ import XMonad.Util.NamedScratchpad
 import XMonad.Util.WorkspaceCompare
 -- }}}
 
+
 -- Workspace ID list is used all over the place
 wsIds = map return "123456789" ++ ["NSP"]
 
@@ -55,21 +51,23 @@ wsIds = map return "123456789" ++ ["NSP"]
 infixr 0 ~>
 (~>) :: a -> b -> (a, b)
 (~>) = (,)
- 
+
 -- scratchpad descriptions - used in key bindings and manageHook {{{
 
 pads =
     [ NS "asunder" "asunder" asunderQuery asunderHook
     , NS "nautilus" "nautilus --browser --sm-client-disable" (resource =? "nautilus") nautilusHook
     , NS "scratch" "urxvt -pe tabbed -name scratch" (resource =? "scratch") scratchHook
-    , NS "tote" "cryptote" (resource =? "cryptote") toteHook
+    , NS "cryptote" "cryptote" (resource =? "cryptote") cryptoteHook
+    , NS "keepassx" "keepassx" (title =? "KeePassX - Password Manager") keepassxHook
     ]
   where
     asunderQuery = ("Asunder" `isPrefixOf`) <$> title
     asunderHook  = doRectFloat $ rr 0.61 0.156 0.3 0.72
     scratchHook  = doRectFloat $ rr 0.38 0.07 0.508 0.3
     nautilusHook = doRectFloat $ rr 0.45 0.19 0.5 0.65
-    toteHook = doRectFloat $ rr 0.1 0.36 0.6 0.58
+    cryptoteHook = doRectFloat $ rr 0.1 0.36 0.6 0.58
+    keepassxHook = doRectFloat $ rr 0.49 0.03 0.51 0.52
     rr = W.RationalRect -- in fractions of screen: x y w h
 
 -- }}}
@@ -86,7 +84,7 @@ main = do
             , focusedBorderColor = bgColor promptConfig
             , borderWidth        = 2
             , workspaces         = wsIds
-            , manageHook         = namedScratchpadManageHook pads <+> manageHooks
+            , manageHook         = manageHooks
             , layoutHook         = layouts
             }
         `additionalKeysP` keys `additionalMouseBindings` buttons
@@ -126,10 +124,6 @@ main = do
  --     via "shift:both_capslock_cancel"
 
 buttons =
-    -- keep defaults on buttons 1 & 2:
-    -- button3 was the only needed to move and resize, but something has gone
-    -- wrong/regressed some while back, slams to a horizontal or
-    -- vertical zero when resized, which didn't use to happen.
     [ (mod4Mask             , button3) ~> Flex.mouseWindow Flex.discrete
     , (mod4Mask             , button4) ~> const $ windows W.swapDown
     , (mod4Mask             , button5) ~> const $ windows W.swapUp
@@ -162,40 +156,19 @@ keys = --
     ++ -- toolbox
     [ "M-<Tab>"   ~> namedScratchpadAction pads "scratch"
     , "M-<F1>"    ~> namedScratchpadAction pads "nautilus"
-    , "M-<F2>"    ~> namedScratchpadAction pads "tote"
+    , "M-<F2>"    ~> namedScratchpadAction pads "cryptote"
+    , "M-M1-<F2>" ~> namedScratchpadAction pads "keepassx"
     , "M-<F3>"    ~> namedScratchpadAction pads "asunder"
     , "M-r"       ~> runOrRaisePrompt promptConfig
     , "M-M1-r"    ~> changeDir promptConfig ]
-    ++ --use intelligent search instead?
-    [ "M-/ "    ++ ks ~> promptSearch promptConfig s | (ks,s) <- searches ]
-    ++
-    [ "M-M1-/ " ++ ks ~> selectSearch s | (ks,s) <- searches ]
   where
-    searches = [ ("f"  , fgo)
-               , ("r"  , rseek)
-               , ("s"  , scroogle)
-               , ("x"  , xm_gmane)
-               , ("g"  , google)
-               , ("i"  , images)
-               , ("w"  , wikipedia)
-               ]
-    fgo      = searchEngineF "gentoo forums" $
-                  wrap "http://www.google.com/search?q="
-                       "+site%3Aforums.gentoo.org+-inurl%3Asearch.php" . escape
-    rseek    = searchEngineF "RSeek" $
-                  wrap "http://www.rseek.org/?cx=010923144343702598753%3Aboaz1reyxd4&newwindow=1&q="
-                       "&sa=Search&cof=FORID%3A11&siteurl=rseek.org%252F#1666" . escape
-    scroogle = searchEngine  "scroogle"
-                  "https://ssl.scroogle.org/cgi-bin/nbbwssl.cgi?Gw="
-    xm_gmane = searchEngine  "xmonad ml"
-                  "http://search.gmane.org/?group=gmane.comp.lang.haskell.xmonad&query="
-
     toggled = toggleOrDoSkip ["NSP"]
     followShift = liftM2 (.) W.view W.shift
+
 -- }}}
 
 -- manage hook {{{
-manageHooks = composeOne
+manageHooks = namedScratchpadManageHook pads <+> composeOne
     [ isDialog                -?> doF W.shiftMaster <+> doFloat
     , ("libreoffice" `isPrefixOf`) <$> className -?> doShift "3"
     , ("Gimp"        `isPrefixOf`) <$> className -?> doShift "5"
@@ -203,10 +176,11 @@ manageHooks = composeOne
     , role =? "reminderFoxEdit" -?>
         doF W.shiftMaster <+> doRectFloat (W.RationalRect 0.15 0.46 0.52 0.432)
     , className =? "Gpick"    -?> doFloat
+    , className =? "Wuala"    -?> doShift "NSP"
+    , className =? "Audacity" -?> doShift "9"
+    , title     =? "Ripping"  -?> doShift "9"
     , className =? "Firefox"  -?> doShift "8"
     , isMPlayerFull           -?> doShift "6"
-    , title =? "Ripping"      -?> doShift "4"
-    , className =? "Audacity" -?> doShift "4"
     , className =? "Apvlv"    -?> doShift "2"
     , className =? "Xmessage" -?> doF W.shiftMaster <+> doCenterFloat
     , className =? "feh"      -?> doF W.shiftMaster <+> doFloat
@@ -221,19 +195,18 @@ manageHooks = composeOne
 -- layouts {{{
 
 layouts = modifiers
-            . onWorkspace "1" four
-            . onWorkspace "2" (TallAlt i 0.5 ||| Mirror (Tall 1 i 0.516))
-            . onWorkspaces ["3", "4"] (workspaceDir cwd many) . onWorkspace "5" gimp
-            . onWorkspace "7" (workspaceDir "~/.xmonad" four) $ workspaceDir "~" many
+            . onWorkspaces ["1", "4"] (workspaceDir "~" edit)
+            . onWorkspaces ["2", "3"] (workspaceDir "~/doc" doc)
+            . onWorkspace "5" (workspaceDir "~/images" edit)
+            . onWorkspace "7" (workspaceDir "~/.xmonad" edit) $ workspaceDir cwd many
   where
     cwd  = "/e4/av/Music"
-    i = 0.00125
     modifiers = smartBorders . toggleLayouts (noBorders Full)
         . layoutHintsToCenter . spacing 1 . avoidStruts
-    four = limitWindows 4 (TallAlt i 0.516) ||| Full
-    gimp = workspaceDir "~/images" . reflectHoriz $ withIM 0.145 (Role "gimp-toolbox") four
+    doc = limitWindows 6 $ TallAlt i 0.5 ||| Mirror (Tall 1 i 0.516)
+    edit = limitWindows 4 (TallAlt i 0.516) ||| Full
     many = Mirror (TallAlt i 0.705) ||| Full ||| Tall 1 i 0.591
---  many = Mirror (TallAlt i (31/44)) ||| Full ||| Tall 1 i (13/22)
+    i = 0.00125
 
 -- TallAlt from <http://www.haskell.org/pipermail/xmonad/2009-July/008270.html>
 data TallAlt a = TallAlt
