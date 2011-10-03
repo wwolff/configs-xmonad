@@ -68,15 +68,12 @@ main = do
             }
         `additionalKeysP` keys `additionalMouseBindings` buttons
     xmonad conf
-        { startupHook = do
+        { logHook = updatePointer $ Relative 0.88 0.88
+        , startupHook = do
             startupHook gnomeConfig
             checkKeymap conf keys
             setWMName "LG3D"
             windows $ onlyOnScreen 1 "8"
---          spawn "xcompmgr -Cc -r 3 -l -5 -t -5 &"
-        , logHook = do
-            updatePointer $ Relative 0.88 0.88
---          fadeMostInactives 0.89 -- plus xcompmgr
         }
       where
         viAndArrowNav =
@@ -90,9 +87,6 @@ main = do
             , (mod4Mask .|. mod1Mask, l) ~> WNSwap L
             , (mod4Mask .|. mod1Mask, d) ~> WNSwap D
             , (mod4Mask .|. mod1Mask, r) ~> WNSwap R ]
---      fadeMostInactives = fadeOutLogHook . fadeIf (isUnfocused <&&> noneOf qs)
---      noneOf = fmap not . foldr1 (<||>)
---      qs = [className =? "Gimp", className =? "URxvt",  isFullscreen, ("layer" `isInfixOf`) <$> className]
 
 -- }}}
 
@@ -125,7 +119,6 @@ keys = --
     ++                         --   a s d \ f g
     [ "M-v" ~> swapNextScreen  --          \ v b
     , "M-b" ~> toggleWS ]
---  , "M-b" ~> toggleWS' ["NSP"] ]
     ++
     [ mask ++ [key] ~> action i | (key, i) <- zip "123qweasd=" wsIds
          , (mask, action) <- [ ("M-", toggled W.greedyView)
@@ -254,7 +247,6 @@ promptConfig = defaultXPConfig
     { font = "xft:Consolas:12"
     , bgColor  = solbase03
     , fgColor  = solbase1
---  , fgColor  = solbase2
     , bgHLight = solyellow
     , fgHLight = solbase02
     , promptBorderWidth = 0
