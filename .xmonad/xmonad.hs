@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fno-warn-missing-signatures #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-} -- for TallAlt
 --
--- sereven xmonad.hs,  0.9.2 - 0.10,  v0.10.8 2011-09-28
+-- sereven xmonad.hs,  0.9.1 - 0.10  2011-11-02
 --
 
 -- imports {{{
@@ -10,11 +10,11 @@ import XMonad hiding (keys)
 import qualified XMonad.StackSet as W
 
 -- standard libraries
-import Control.Applicative ((<$>))
-import Control.Monad (liftM2)
+import Control.Applicative ((<$>)) -- , liftA2)
+import Control.Monad (liftM2, (>=>))
 --import Data.List (isPrefixOf, isInfixOf, nub)
 import Data.List (isPrefixOf, nub)
-import Data.Maybe (fromMaybe)
+--import Data.Maybe (fromMaybe)
 import System.Exit
 
 -- xmonad-contrib (darcs || 0.10)
@@ -24,7 +24,7 @@ import XMonad.Actions.OnScreen (onlyOnScreen)
 import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowNavigation
 import XMonad.Config.Gnome
-import XMonad.Hooks.DynamicLog
+--import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.SetWMName
@@ -38,9 +38,9 @@ import XMonad.Layout.WorkspaceDir
 import XMonad.Prompt
 import XMonad.Prompt.RunOrRaise
 import XMonad.Util.EZConfig
-import XMonad.Util.Run (hPutStrLn, spawnPipe)
+--import XMonad.Util.Run (hPutStrLn, spawnPipe)
 import XMonad.Util.NamedScratchpad
-import XMonad.Util.WorkspaceCompare
+--import XMonad.Util.WorkspaceCompare
 -- }}}
 
 
@@ -52,31 +52,10 @@ infixr 0 ~>
 (~>) :: a -> b -> (a, b)
 (~>) = (,)
 
--- scratchpad descriptions - used in key bindings and manageHook {{{
-
-pads =
-    [ NS "asunder" "asunder" asunderQuery asunderHook
-    , NS "nautilus" "nautilus --browser --sm-client-disable" (resource =? "nautilus") nautilusHook
-    , NS "scratch" "urxvt -pe tabbed -name scratch" (resource =? "scratch") scratchHook
-    , NS "cryptote" "cryptote" (resource =? "cryptote") cryptoteHook
-    , NS "keepassx" "keepassx" (title =? "KeePassX - Password Manager") keepassxHook
-    ]
-  where
-    asunderQuery = ("Asunder" `isPrefixOf`) <$> title
-    asunderHook  = doRectFloat $ rr 0.61 0.156 0.3 0.72
-    scratchHook  = doRectFloat $ rr 0.38 0.07 0.508 0.3
-    nautilusHook = doRectFloat $ rr 0.45 0.19 0.5 0.65
-    cryptoteHook = doRectFloat $ rr 0.1 0.36 0.6 0.58
-    keepassxHook = doRectFloat $ rr 0.49 0.03 0.51 0.52
-    rr = W.RationalRect -- in fractions of screen: x y w h
-
--- }}}
-
 -- main {{{
 
 main = do
-    dz <- spawnPipe themedDzen
-    conf <- withNavKeys (xK_k, xK_h, xK_j, xK_l) $
+    conf <- viAndArrowNav $ -- play nicer with irssi nav
         gnomeConfig
             { terminal           = "urxvt"
             , modMask            = mod4Mask
@@ -97,10 +76,11 @@ main = do
 --          spawn "xcompmgr -Cc -r 3 -l -5 -t -5 &"
         , logHook = do
             updatePointer $ Relative 0.88 0.88
-            dynamicLogWithPP dzPP { ppOutput = hPutStrLn dz }
 --          fadeMostInactives 0.89 -- plus xcompmgr
         }
       where
+        viAndArrowNav =
+            withNavKeys (xK_k, xK_h, xK_j, xK_l) >=> withNavKeys (xK_Up, xK_Left, xK_Down, xK_Right)
         withNavKeys (u,l,d,r) = withWindowNavigationKeys
             [ (mod4Mask             , u) ~> WNGo   U
             , (mod4Mask             , l) ~> WNGo   L
@@ -143,7 +123,9 @@ keys = --
     -- workspaces and screens  -- 1 2 3 \
                                --  q w e \
     ++                         --   a s d \ f g
-    [ "M-v" ~> swapNextScreen] --          \ v (b)
+    [ "M-v" ~> swapNextScreen  --          \ v b
+    , "M-b" ~> toggleWS ]
+--  , "M-b" ~> toggleWS' ["NSP"] ]
     ++
     [ mask ++ [key] ~> action i | (key, i) <- zip "123qweasd=" wsIds
          , (mask, action) <- [ ("M-", toggled W.greedyView)
@@ -158,12 +140,35 @@ keys = --
     , "M-<F1>"    ~> namedScratchpadAction pads "nautilus"
     , "M-<F2>"    ~> namedScratchpadAction pads "cryptote"
     , "M-M1-<F2>" ~> namedScratchpadAction pads "keepassx"
-    , "M-<F3>"    ~> namedScratchpadAction pads "asunder"
+    , "M-<F3>"    ~> namedScratchpadAction pads "picard"
+    , "M-M1-<F3>" ~> namedScratchpadAction pads "asunder"
     , "M-r"       ~> runOrRaisePrompt promptConfig
-    , "M-M1-r"    ~> changeDir promptConfig ]
+    , "M-M1-r"    ~> changeDir promptConfig
+    ]
   where
     toggled = toggleOrDoSkip ["NSP"]
     followShift = liftM2 (.) W.view W.shift
+
+-- }}}
+
+-- scratchpad descriptions - used in key bindings and manageHook {{{
+
+pads =
+    [ NS "scratch" "urxvt -pe tabbed -name scratch" (resource =? "scratch") scratchHook
+    , NS "nautilus" "nautilus --browser --sm-client-disable" (resource =? "nautilus") nautilusHook
+    , NS "cryptote" "cryptote" (resource =? "cryptote") cryptoteHook
+    , NS "keepassx" "keepassx" (title =? "KeePassX - Password Manager") keepassxHook
+    , NS "picard" "picard" (title =? "MusicBrainz Picard") picardHook
+    , NS "asunder" "asunder" (("Asunder" `isPrefixOf`) <$> title) asunderHook
+    ]
+  where
+    scratchHook  = doRectFloat $ rr 0.51 0.52 0.46 0.44
+    nautilusHook = doRectFloat $ rr 0.45 0.19 0.5 0.65
+    cryptoteHook = doRectFloat $ rr 0.42 0.07 0.48 0.6
+    keepassxHook = doRectFloat $ rr 0.49 0.03 0.51 0.52
+    picardHook   = doRectFloat $ rr 0.35 0.28 0.64 0.65
+    asunderHook  = doRectFloat $ rr 0.61 0.156 0.3 0.72
+    rr = W.RationalRect -- in fractions of screen: x y w h
 
 -- }}}
 
@@ -178,7 +183,6 @@ manageHooks = namedScratchpadManageHook pads <+> composeOne
     , className =? "Gpick"    -?> doFloat
     , className =? "Wuala"    -?> doShift "NSP"
     , className =? "Audacity" -?> doShift "9"
-    , title     =? "Ripping"  -?> doShift "9"
     , className =? "Firefox"  -?> doShift "8"
     , isMPlayerFull           -?> doShift "6"
     , className =? "Apvlv"    -?> doShift "2"
@@ -226,7 +230,7 @@ instance LayoutClass TallAlt a where
 
 -- }}}
 
--- prompt and dzen {{{
+-- prompt {{{
 
 -- solarized color pallette
 solbase03  = "#002b36"
@@ -259,40 +263,6 @@ promptConfig = defaultXPConfig
     , showCompletionOnTab = True
     }
 
-themedDzen = "dzen2 -xs 1 -x 25 -ta l -e 'onstart=lower'"
-      ++ " -bg " ++ "'" ++ bgColor promptConfig ++ "'"
-      ++ " -fg " ++ "'" ++ fgColor promptConfig ++ "'"
-      ++ " -fn Denmark:Thin:size=11"
-      ++ " -h "  ++ show (height promptConfig + 2)
-
-dzPP  = defaultPP
-    { ppCurrent         = \i -> wsColorCurrent i (wrap "|" "|" (wsIcon i)) ++ "^p(6;)"
-    , ppVisible         = \i -> wsColorVisible i (wrap "|" "|" (wsIcon i)) ++ "^p(6;)"
-    , ppHidden          = fg "wheat4" . wsIcon
-    , ppHiddenNoWindows = fg "gray28" . wsIcon
-    , ppWsSep           = "^p(6;)"
-    , ppTitle           = take 143 . dzenEscape
-    , ppSep             = ""
-    , ppSort            = getSortByXineramaRule -- ensure wsIds alphabetical
-    , ppOrder           = ppo
-    }
-  where
-    wsIcon = wrap "^i(" ")" . ("/home/gvg/.config/dzen/icons/" ++) . wrap "ws-" ".xbm"
-    ppo (ws:_:t:_) = ["^p(18;)", ws, "^p(80;).: ", t, " :."]
-    ppo _          = ["Your logHook is broken."]
-
-fg ::  String -> String -> String
-fg c = dzenColor c ""
-
-wsColorCurrent ::  String -> String -> String
-wsColorCurrent i =
-    fg . fromMaybe "wheat2" . lookup i . zip wsIds $
-            concatMap (replicate 3) ["DarkOrchid1", "DodgerBlue1", "OliveDrab2"]
-
-wsColorVisible ::  String -> String -> String
-wsColorVisible i =
-    fg . fromMaybe "wheat4" . lookup i . zip wsIds $
-            concatMap (replicate 3) ["DarkOrchid3", "DodgerBlue4", "OliveDrab4"]
 -- }}}
 
 -- vim:foldmethod=marker
