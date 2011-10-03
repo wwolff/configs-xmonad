@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fno-warn-missing-signatures #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-} -- for TallAlt
 --
--- sereven xmonad.hs,  0.9.1 - 0.10  2011-11-02
+-- sereven (vav) xmonad.hs,  0.9.1 - 0.10  2011-11-03
 --
 
 -- imports {{{
@@ -24,7 +24,6 @@ import XMonad.Actions.OnScreen (onlyOnScreen)
 import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowNavigation
 import XMonad.Config.Gnome
---import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.SetWMName
@@ -40,12 +39,8 @@ import XMonad.Prompt.RunOrRaise
 import XMonad.Util.EZConfig
 --import XMonad.Util.Run (hPutStrLn, spawnPipe)
 import XMonad.Util.NamedScratchpad
---import XMonad.Util.WorkspaceCompare
 -- }}}
 
-
--- Workspace ID list is used all over the place
-wsIds = map return "123456789" ++ ["NSP"]
 
 -- Infix (,) to clean up key and mouse bindings
 infixr 0 ~>
@@ -54,39 +49,43 @@ infixr 0 ~>
 
 -- main {{{
 
-main = do
-    conf <- viAndArrowNav $ -- play nicer with irssi nav
-        gnomeConfig
-            { terminal           = "urxvt"
-            , modMask            = mod4Mask
-            , normalBorderColor  = fgColor promptConfig
-            , focusedBorderColor = bgColor promptConfig
-            , borderWidth        = 2
-            , workspaces         = wsIds
-            , manageHook         = manageHooks
-            , layoutHook         = layouts
-            }
-        `additionalKeysP` keys `additionalMouseBindings` buttons
-    xmonad conf
-        { logHook = updatePointer $ Relative 0.88 0.88
-        , startupHook = do
-            startupHook gnomeConfig
-            checkKeymap conf keys
-            setWMName "LG3D"
-            windows $ onlyOnScreen 1 "8"
-        }
-      where
-        viAndArrowNav =
-            withNavKeys (xK_k, xK_h, xK_j, xK_l) >=> withNavKeys (xK_Up, xK_Left, xK_Down, xK_Right)
-        withNavKeys (u,l,d,r) = withWindowNavigationKeys
-            [ (mod4Mask             , u) ~> WNGo   U
-            , (mod4Mask             , l) ~> WNGo   L
-            , (mod4Mask             , d) ~> WNGo   D
-            , (mod4Mask             , r) ~> WNGo   R
-            , (mod4Mask .|. mod1Mask, u) ~> WNSwap U
-            , (mod4Mask .|. mod1Mask, l) ~> WNSwap L
-            , (mod4Mask .|. mod1Mask, d) ~> WNSwap D
-            , (mod4Mask .|. mod1Mask, r) ~> WNSwap R ]
+main = viAndArrowNav conf >>= xmonad
+
+conf = gnomeConfig
+    { terminal           = "urxvt"
+    , modMask            = mod4Mask
+    , borderWidth        = 2
+    , normalBorderColor  = fgColor promptConfig
+    , focusedBorderColor = bgColor promptConfig
+    , manageHook         = manageHooks
+    , layoutHook         = layouts
+    , logHook = updatePointer $ Relative 0.88 0.88
+    , startupHook = do
+        startupHook gnomeConfig
+        checkKeymap conf keys
+        setWMName "LG3D"
+        windows $ onlyOnScreen 1 "8"
+    , workspaces         = wsIds
+    } `additionalKeysP` keys `additionalMouseBindings` buttons
+
+-- Workspace list is used all over the place
+wsIds = map return "123456789" ++ ["NSP"]
+
+-- make Actions.WindowNavigation play nicer with irssi keys
+viAndArrowNav ::  XConfig l -> IO (XConfig l)
+viAndArrowNav =
+    withNavKeys (xK_Up, xK_Left, xK_Down, xK_Right) >=> withNavKeys (xK_k, xK_h, xK_j, xK_l)
+
+withNavKeys :: (KeySym, KeySym, KeySym, KeySym) -> XConfig l -> IO (XConfig l)
+withNavKeys (u,l,d,r) = withWindowNavigationKeys
+    [ (mod4Mask             , u) ~> WNGo   U
+    , (mod4Mask             , l) ~> WNGo   L
+    , (mod4Mask             , d) ~> WNGo   D
+    , (mod4Mask             , r) ~> WNGo   R
+    , (mod4Mask .|. mod1Mask, u) ~> WNSwap U
+    , (mod4Mask .|. mod1Mask, l) ~> WNSwap L
+    , (mod4Mask .|. mod1Mask, d) ~> WNSwap D
+    , (mod4Mask .|. mod1Mask, r) ~> WNSwap R ]
 
 -- }}}
 
