@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fno-warn-missing-signatures #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-} -- for TallAlt
 --
--- sereven (vav) xmonad.hs,  0.9.1 - 0.10  2011-11-03
+-- sereven (vav) xmonad.hs,  0.9.1 - 0.10  2011-10-12
 --
 
 -- imports {{{
@@ -12,14 +12,13 @@ import qualified XMonad.StackSet as W
 -- standard libraries
 import Control.Applicative ((<$>)) -- , liftA2)
 import Control.Monad (liftM2, (>=>))
---import Data.List (isPrefixOf, isInfixOf, nub)
 import Data.List (isPrefixOf, nub)
---import Data.Maybe (fromMaybe)
 import System.Exit
 
--- xmonad-contrib (darcs || 0.10)
+-- xmonad-contrib (0.9.1 || darcs || 0.10)
 import XMonad.Actions.CycleWS
 import XMonad.Actions.FlexibleManipulate as Flex
+import XMonad.Actions.FloatKeys
 import XMonad.Actions.OnScreen (onlyOnScreen)
 import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowNavigation
@@ -37,7 +36,6 @@ import XMonad.Layout.WorkspaceDir
 import XMonad.Prompt
 import XMonad.Prompt.RunOrRaise
 import XMonad.Util.EZConfig
---import XMonad.Util.Run (hPutStrLn, spawnPipe)
 import XMonad.Util.NamedScratchpad
 -- }}}
 
@@ -74,18 +72,14 @@ wsIds = map return "123456789" ++ ["NSP"]
 -- make Actions.WindowNavigation play nicer with irssi keys
 viAndArrowNav ::  XConfig l -> IO (XConfig l)
 viAndArrowNav =
-    withNavKeys (xK_Up, xK_Left, xK_Down, xK_Right) >=> withNavKeys (xK_k, xK_h, xK_j, xK_l)
+    withNavKeys (xK_Up, xK_Left, xK_Down, xK_Right)
+        >=> withNavKeys (xK_k, xK_h, xK_j, xK_l)
 
-withNavKeys :: (KeySym, KeySym, KeySym, KeySym) -> XConfig l -> IO (XConfig l)
-withNavKeys (u,l,d,r) = withWindowNavigationKeys
-    [ (mod4Mask             , u) ~> WNGo   U
-    , (mod4Mask             , l) ~> WNGo   L
-    , (mod4Mask             , d) ~> WNGo   D
-    , (mod4Mask             , r) ~> WNGo   R
-    , (mod4Mask .|. mod1Mask, u) ~> WNSwap U
-    , (mod4Mask .|. mod1Mask, l) ~> WNSwap L
-    , (mod4Mask .|. mod1Mask, d) ~> WNSwap D
-    , (mod4Mask .|. mod1Mask, r) ~> WNSwap R ]
+withNavKeys (u,l,d,r) = withWindowNavigationKeys $
+    [ (mod4Mask .|. mm, key) ~> action dir
+    | (mm, action) <- [(0, WNGo), (mod1Mask, WNSwap)]
+        , (key, dir) <- zip [u, l, d, r] [U, L, D, R]
+    ]
 
 -- }}}
 
@@ -101,7 +95,8 @@ buttons =
     , (mod4Mask             , button4) ~> const $ windows W.swapDown
     , (mod4Mask             , button5) ~> const $ windows W.swapUp
     , (mod4Mask .|. mod1Mask, button4) ~> const $ moveTo Next HiddenWS
-    , (mod4Mask .|. mod1Mask, button5) ~> const $ moveTo Prev HiddenWS ]
+    , (mod4Mask .|. mod1Mask, button5) ~> const $ moveTo Prev HiddenWS
+    ]
 
 
 keys = --
@@ -112,6 +107,14 @@ keys = --
     , "M-M1-<Return>" ~> windows $ W.focusUp . W.focusMaster
     , "M-M1-,"        ~> sendMessage Shrink
     , "M-M1-."        ~> sendMessage Expand
+    , "M-i"           ~> withFocused $ keysResizeWindow (0, 19) (1,1)
+    , "M-u"           ~> withFocused $ keysResizeWindow (0,-19) (1,1)
+    , "M-M1-i"        ~> withFocused $ keysResizeWindow (0,-19) (0,0)
+    , "M-M1-u"        ~> withFocused $ keysResizeWindow (0, 19) (0,0)
+    , "M-o"           ~> withFocused $ keysResizeWindow ( 9, 0) (0,0)
+    , "M-y"           ~> withFocused $ keysResizeWindow (-9, 0) (0,0)
+    , "M-M1-o"        ~> withFocused $ keysResizeWindow (-9, 0) (1,1)
+    , "M-M1-y"        ~> withFocused $ keysResizeWindow ( 9, 0) (1,1)
     ]
     -- workspaces and screens  -- 1 2 3 \
                                --  q w e \
@@ -227,20 +230,20 @@ instance LayoutClass TallAlt a where
 -- solarized color pallette
 solbase03  = "#002b36"
 solbase02  = "#073642"
-solbase01  = "#586e75"
-solbase00  = "#657b83"
-solbase0   = "#839496"
+--solbase01  = "#586e75"
+--solbase00  = "#657b83"
+--solbase0   = "#839496"
 solbase1   = "#93a1a1"
-solbase2   = "#eee8d5"
-solbase3   = "#fdf6e3"
+--solbase2   = "#eee8d5"
+--solbase3   = "#fdf6e3"
 solyellow  = "#b58900"
-solorange  = "#cb4b16"
-solred     = "#dc322f"
-solmagenta = "#d33682"
-solviolet  = "#6c71c4"
-solblue    = "#268bd2"
-solcyan    = "#2aa198"
-solgreen   = "#859900"
+--solorange  = "#cb4b16"
+--solred     = "#dc322f"
+--solmagenta = "#d33682"
+--solviolet  = "#6c71c4"
+--solblue    = "#268bd2"
+--solcyan    = "#2aa198"
+--solgreen   = "#859900"
 
 promptConfig = defaultXPConfig
     { font = "xft:Consolas:12"
